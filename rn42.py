@@ -3,7 +3,6 @@
 # Copyright 2016 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """This module provides an abstraction of RN-42 bluetooth chip."""
 
 import logging
@@ -144,18 +143,22 @@ class RN42(object):
             raise RN42Exception('Fail to connect to the serial device.')
 
     def __del__(self):
-        self.Close()
+        self.close()
 
-    def Close(self):
+    def close(self):
         """
         Close the device gracefully.
         """
         if not self._closed:
-            self.LeaveCommandMode()
+            self.leave_command_mode()
             self._serial.Disconnect()
             self._closed = True
 
-    def SerialSendReceive(self, command, expect='', expect_in='', msg='serial SendReceive()'):
+    def serial_send_and_receive(self,
+                                command,
+                                expect='',
+                                expect_in='',
+                                msg='serial SendReceive()'):
         """A wrapper of SerialDevice.SendReceive().
 
         Args:
@@ -192,7 +195,7 @@ class RN42(object):
         logging.info('Success in %s: %s', msg, result)
         return result
 
-    def EnterCommandMode(self):
+    def enter_command_mode(self):
         """Make the chip enter command mode.
 
         Returns:
@@ -222,7 +225,7 @@ class RN42(object):
             # and returns an empty string. So let's check if we could get the
             # chip name to make sure that it is indeed in command mode.
             try:
-                chip_name = self.GetChipName()
+                chip_name = self.get_chip_name()
                 if chip_name.startswith(self.CHIP_NAME):
                     msg = 'Correct chip name when entering command mode: %s'
                     logging.info(msg, chip_name)
@@ -238,31 +241,31 @@ class RN42(object):
             msg = 'Incorrect response in entering command mode: %s'
             raise RN42Exception(msg % result)
 
-    def LeaveCommandMode(self):
+    def leave_command_mode(self):
         """Make the chip leave command mode.
         Returns:
             True if the kit left the command mode successfully.
         """
         if self._command_mode:
-            self.SerialSendReceive(self.CMD_LEAVE_COMMAND_MODE,
-                                   expect='END',
-                                   msg='leaving command mode')
+            self.serial_send_and_receive(self.CMD_LEAVE_COMMAND_MODE,
+                                         expect='END',
+                                         msg='leaving command mode')
             self._command_mode = False
         return True
 
-    def Reboot(self):
+    def reboot(self):
         """Reboot the chip.
         Reboot is required to make some settings take effect when the settings are changed.
 
         Returns:
             True if the kit rebooted successfully.
         """
-        self.SerialSendReceive(self.CMD_REBOOT,
-                               expect='Reboot',
-                               msg='rebooting RN-42')
+        self.serial_send_and_receive(self.CMD_REBOOT,
+                                     expect='Reboot',
+                                     msg='rebooting RN-42')
         return True
 
-    def GetChipName(self):
+    def get_chip_name(self):
         """Get the chip name.
         The chip returns something like 'RNBT-A955\\r\\n'
         where 'RN' means Roving Network, 'BT' bluetooth, and
@@ -271,10 +274,10 @@ class RN42(object):
         Returns:
             the chip name
         """
-        return self.SerialSendReceive(self.CMD_GET_CHIP_NAME,
-                                      msg='getting chip name')
+        return self.serial_send_and_receive(self.CMD_GET_CHIP_NAME,
+                                            msg='getting chip name')
 
-    def GetFirmwareVersion(self):
+    def get_firmware_version(self):
         """Get the firmware version of the chip.
         The chip returns something like
             'Ver 6.15 04/26/2013\\r\\n(c) Roving Networks\\r\\n'
@@ -283,112 +286,114 @@ class RN42(object):
         Returns:
             the firmware version
         """
-        return self.SerialSendReceive(self.CMD_GET_FIRMWARE_VERSION,
-                                      expect_in='Ver',
-                                      msg='getting firmware version')
+        return self.serial_send_and_receive(self.CMD_GET_FIRMWARE_VERSION,
+                                            expect_in='Ver',
+                                            msg='getting firmware version')
 
-    def GetOperationMode(self):
+    def get_operation_mode(self):
         """Get the operation mode.
 
         Returns:
             the operation mode
         """
-        result = self.SerialSendReceive(self.CMD_GET_OPERATION_MODE,
-                                        msg='getting operation mode')
+        result = self.serial_send_and_receive(self.CMD_GET_OPERATION_MODE,
+                                              msg='getting operation mode')
         return self.OPERATION_MODE.get(result)
 
-    def SetMasterMode(self):
+    def set_master_mode(self):
         """Set the chip to master mode.
 
         Returns:
             True if setting master mode successfully.
         """
-        self.SerialSendReceive(self.CMD_SET_MASTER_MODE,
-                               expect=self.AOK,
-                               msg='setting master mode')
+        self.serial_send_and_receive(self.CMD_SET_MASTER_MODE,
+                                     expect=self.AOK,
+                                     msg='setting master mode')
         return True
 
-    def SetSlaveMode(self):
+    def set_slave_mode(self):
         """Set the chip to slave mode.
 
         Returns:
             True if setting slave mode successfully.
         """
-        self.SerialSendReceive(self.CMD_SET_SLAVE_MODE,
-                               expect=self.AOK,
-                               msg='setting slave mode')
+        self.serial_send_and_receive(self.CMD_SET_SLAVE_MODE,
+                                     expect=self.AOK,
+                                     msg='setting slave mode')
         return True
 
-    def GetAuthenticationMode(self):
+    def get_authentication_mode(self):
         """Get the authentication mode.
         Returns:
         a string representing the authentication mode
         """
-        result = self.SerialSendReceive(self.CMD_GET_AUTHENTICATION_MODE,
-                                        msg='getting authentication mode')
+        result = self.serial_send_and_receive(
+            self.CMD_GET_AUTHENTICATION_MODE,
+            msg='getting authentication mode')
         return self.AUTHENTICATION_MODE.get(result)
 
-    def SetAuthenticationOpenMode(self):
+    def set_authentication_open_mode(self):
         """Set the authentication to open mode (no authentication).
 
         Returns:
             True if setting open mode successfully.
         """
-        self.SerialSendReceive(self.CMD_SET_AUTHENTICATION_OPEN_MODE,
-                               expect=self.AOK,
-                               msg='setting authentication open mode')
+        self.serial_send_and_receive(self.CMD_SET_AUTHENTICATION_OPEN_MODE,
+                                     expect=self.AOK,
+                                     msg='setting authentication open mode')
         return True
 
-    def SetAuthenticationPinMode(self):
+    def set_authentication_pin_mode(self):
         """Set the authentication to pin mode (host to send a matching pin).
         Returns:
         True if setting pin code mode successfully.
         """
-        self.SerialSendReceive(self.CMD_SET_AUTHENTICATION_PIN_MODE,
-                               expect=self.AOK,
-                               msg='setting authentication pin mode')
+        self.serial_send_and_receive(self.CMD_SET_AUTHENTICATION_PIN_MODE,
+                                     expect=self.AOK,
+                                     msg='setting authentication pin mode')
         return True
 
-    def GetServiceProfile(self):
+    def get_service_profile(self):
         """Get the service profile.
         Returns:
         a string representing the service profile
         """
-        result = self.SerialSendReceive(self.CMD_GET_SERVICE_PROFILE,
-                                        msg='getting service profile')
+        result = self.serial_send_and_receive(self.CMD_GET_SERVICE_PROFILE,
+                                              msg='getting service profile')
         return self.SERVICE_PROFILE.get(result)
 
-    def SetServiceProfileSPP(self):
+    def set_service_profile_SPP(self):
         """Set SPP as service profile.
 
         Returns:
             True if setting SPP profile successfully.
         """
-        self.SerialSendReceive(self.CMD_SET_SERVICE_PROFILE_SPP,
-                               expect=self.AOK,
-                               msg='setting SPP as service profile')
+        self.serial_send_and_receive(self.CMD_SET_SERVICE_PROFILE_SPP,
+                                     expect=self.AOK,
+                                     msg='setting SPP as service profile')
         return True
 
-    def SetServiceProfileHID(self):
+    def set_service_profile_HID(self):
         """Set HID as service profile.
 
         Returns:
             True if setting HID profile successfully.
         """
-        self.SerialSendReceive(self.CMD_SET_SERVICE_PROFILE_HID,
-                               expect=self.AOK,
-                               msg='setting HID as service profile')
+        self.serial_send_and_receive(self.CMD_SET_SERVICE_PROFILE_HID,
+                                     expect=self.AOK,
+                                     msg='setting HID as service profile')
         return True
 
-    def GetLocalBluetoothAddress(self):
+    def get_local_bluetooth_address(self):
         """Get the local RN-42 bluetooth mac address.
         Returns:
         the bluetooth mac address of the kit
         """
-        return self.SerialSendReceive(self.CMD_GET_RN42_BLUETOOTH_MAC,
-                                      msg='getting local bluetooth address')
+        return self.serial_send_and_receive(
+            self.CMD_GET_RN42_BLUETOOTH_MAC,
+            msg='getting local bluetooth address')
 
-    def GetConnectionStatus(self):
+    def get_connection_status(self):
         """Get the connection status.
         the connection status returned from the kit could be
         '0,0,0': not connected
@@ -396,86 +401,83 @@ class RN42(object):
         Returns:
         Ture if RN-42 is connected.
         """
-        result = self.SerialSendReceive(self.CMD_GET_CONNECTION_STATUS,
-                                        msg='getting connection status')
+        result = self.serial_send_and_receive(self.CMD_GET_CONNECTION_STATUS,
+                                              msg='getting connection status')
         connection = result.split(',')[0]
         return connection == '1'
 
-    def GetRemoteConnectedBluetoothAddress(self):
+    def get_remote_connected_bluetooth_address(self):
         """Get the bluetooth mac address of the current connected remote host.
         Returns:
-        the bluetooth mac address of the remote connected device if applicable,
-        or None if there is no remote connected device.
+            the bluetooth mac address of the remote connected device if applicable,
+            or None if there is no remote connected device.
         """
-        result = self.SerialSendReceive(
+        result = self.serial_send_and_receive(
             self.CMD_GET_REMOTE_CONNECTED_BLUETOOTH_MAC,
             msg='getting local bluetooth address')
         #  result is '000000000000' if there is no remote connected device
         return None if result == '000000000000' else result
 
-    def GetHIDDeviceType(self):
+    def get_HID_deviceType(self):
         """Get the HID device type.
         Returns:
-        a string representing the HID device type
+            a string representing the HID device type
         """
-        result = self.SerialSendReceive(self.CMD_GET_HID,
-                                        msg='getting HID device type')
+        result = self.serial_send_and_receive(self.CMD_GET_HID,
+                                              msg='getting HID device type')
         return self.HID_DEVICE_TYPE.get(result)
 
-    def SetHIDKeyboard(self):
+    def set_HID_keyboard(self):
         """Set keyboard as the HID device.
         Returns:
-        True if setting keyboard as the HID device successfully.
+            True if setting keyboard as the HID device successfully.
         """
-        self.SerialSendReceive(self.CMD_SET_HID_KEYBOARD,
-                               expect=self.AOK,
-                               msg='setting keyboard as HID device')
+        self.serial_send_and_receive(self.CMD_SET_HID_KEYBOARD,
+                                     expect=self.AOK,
+                                     msg='setting keyboard as HID device')
         return True
 
-    def SetHIDGamepad(self):
+    def set_HID_gamepad(self):
         """Set game pad as the HID device.
         Returns:
-        True if setting game pad as the HID device successfully.
+            True if setting game pad as the HID device successfully.
         """
-        self.SerialSendReceive(self.CMD_SET_HID_GAMEPAD,
-                               expect=self.AOK,
-                               msg='setting gamepad as HID device')
+        self.serial_send_and_receive(self.CMD_SET_HID_GAMEPAD,
+                                     expect=self.AOK,
+                                     msg='setting gamepad as HID device')
         return True
 
-    def SetHIDMouse(self):
+    def set_HID_mouse(self):
         """Set mouse as the HID device.
 
         Returns:
             True if setting mouse as the HID device successfully.
         """
-        self.SerialSendReceive(
-            self.CMD_SET_HID_MOUSE,
-            expect=self.AOK,
-            msg='setting mouse as HID device')
+        self.serial_send_and_receive(self.CMD_SET_HID_MOUSE,
+                                     expect=self.AOK,
+                                     msg='setting mouse as HID device')
         return True
 
-    def SetHIDCombo(self):
+    def set_HID_combo(self):
         """Set combo as the HID device.
 
         Returns:
             True if setting combo as the HID device successfully.
         """
-        self.SerialSendReceive(
-            self.CMD_SET_HID_COMBO,
-            expect=self.AOK,
-            msg='setting combo as HID device')
+        self.serial_send_and_receive(self.CMD_SET_HID_COMBO,
+                                     expect=self.AOK,
+                                     msg='setting combo as HID device')
         return True
 
-    def SetHIDJoystick(self):
+    def set_HID_joystick(self):
         """Set joystick as the HID device.
 
         Returns:
             True if setting joystick as the HID device successfully.
         """
-        self.SerialSendReceive(
-            self.CMD_SET_HID_JOYSTICK,
-            expect=self.AOK,
-            msg='setting joystick as HID device')
+        self.serial_send_and_receive(self.CMD_SET_HID_JOYSTICK,
+                                     expect=self.AOK,
+                                     msg='setting joystick as HID device')
         return True
 
 
@@ -484,17 +486,18 @@ def GetRN42Info():
     print('Hello RN-42-EK')
 
     rn42 = RN42()
-    print('enter:', rn42.EnterCommandMode())
-    print('chip name:', rn42.GetChipName())
-    print('firmware version:', rn42.GetFirmwareVersion())
-    print('operation mode:', rn42.GetOperationMode())
-    print('authentication mode:', rn42.GetAuthenticationMode())
-    print('service profile:', rn42.GetServiceProfile())
-    print('local bluetooth address:', rn42.GetLocalBluetoothAddress())
-    print('connection status:', rn42.GetConnectionStatus())
-    print('remote bluetooth address:', rn42.GetRemoteConnectedBluetoothAddress())
-    print('HID device type:', rn42.GetHIDDeviceType())
-    print('leave:', rn42.LeaveCommandMode())
+    print('enter:', rn42.enter_command_mode())
+    print('chip name:', rn42.get_chip_name())
+    print('firmware version:', rn42.get_firmware_version())
+    print('operation mode:', rn42.get_operation_mode())
+    print('authentication mode:', rn42.get_authentication_mode())
+    print('service profile:', rn42.get_service_profile())
+    print('local bluetooth address:', rn42.get_local_bluetooth_address())
+    print('connection status:', rn42.get_connection_status())
+    print('remote bluetooth address:',
+          rn42.get_remote_connected_bluetooth_address())
+    print('HID device type:', rn42.get_HID_deviceType())
+    print('leave:', rn42.leave_command_mode())
 
 
 if __name__ == '__main__':
